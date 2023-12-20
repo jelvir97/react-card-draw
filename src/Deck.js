@@ -1,13 +1,17 @@
-import React, {useState, useEffect} from "react";
+import React, {useState, useEffect, useRef} from "react";
 import axios from "axios";
 import Card from "./Card";
 
+const baseUrl =`https://deckofcardsapi.com/api/deck/`
+
 const Deck = ()=>{
     const [deckId, setDeckId] = useState(null)
-    const [baseUrl, setBaseUrl] = useState(`https://deckofcardsapi.com/api/deck/`)
     const [cards, setCards] = useState([])
     const [cardsRemaining, setCardsRemaining] = useState(52)
+
     const [shuffling, setShuffling] = useState(false)
+    const [drawing, setDrawing] = useState(false)
+    const timerId = useRef(null)
 
     useEffect(()=>{
         console.log('using effect')
@@ -15,7 +19,33 @@ const Deck = ()=>{
         }
     ,[])
     
-    const drawCard = async ()=>{
+    useEffect( ()=>{
+        const drawCard = async ()=>{
+            try{
+                const {data} = await axios.get(baseUrl+deckId+"/draw/?count=1")
+    
+                setCards(cards=>[...cards, {img: data.cards[0].image, code: data.cards[0].code}])
+                setCardsRemaining(data.remaining)
+            }catch(err){
+                alert('There are no more cards!')
+            }
+        }
+
+        if(!drawing && timerId.current){
+            console.log('shutting down timer')
+            clearInterval(timerId.current)
+            timerId.current = null;
+        } 
+
+        if(drawing){
+            timerId.current = setInterval(drawCard, 1000)
+        }
+
+
+    }, [drawing])
+
+
+    const drawSingleCard = async ()=>{
         try{
             const {data} = await axios.get(baseUrl+deckId+"/draw/?count=1")
 
@@ -40,11 +70,16 @@ const Deck = ()=>{
         }
     }
 
+    const autoDraw = ()=>{
+        setDrawing(!drawing)
+    }
+
 
     return (
         <div className="Deck">
-            <button className="Deck-DrawButton" onClick={drawCard} disabled={shuffling}>Draw</button>
-            <button className="Deck-ShuffleButton" onClick={shuffleCards} disabled={shuffling}>{shuffling? '...loading':"Shuffle"}</button>
+            <button className="Deck-DrawButton" onClick={autoDraw} disabled={shuffling}>{drawing? "Stop":"Start"} Auto-Draw</button>
+            <button className="Deck-DrawButton" onClick={drawSingleCard} disabled={shuffling||drawing}>Draw</button>
+            <button className="Deck-ShuffleButton" onClick={shuffleCards} disabled={shuffling||drawing}>{shuffling? '...loading':"Shuffle"}</button>
             <div className="Deck-Container">
                 <h3>Cards Remaining: {cardsRemaining}</h3>
                 {cards.map(c => <Card url={c.img} key={c.code}/>)}
