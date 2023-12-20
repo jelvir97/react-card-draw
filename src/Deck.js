@@ -23,11 +23,14 @@ const Deck = ()=>{
         const drawCard = async ()=>{
             try{
                 const {data} = await axios.get(baseUrl+deckId+"/draw/?count=1")
-    
-                setCards(cards=>[...cards, {img: data.cards[0].image, code: data.cards[0].code}])
                 setCardsRemaining(data.remaining)
+                setCards(cards=>[...cards, {img: data.cards[0].image, code: data.cards[0].code}])
+                if (data.remaining === 0) throw new Error("Deck empty!");
+                
             }catch(err){
-                alert('There are no more cards!')
+                console.log('No more cards')
+                setDrawing(false)
+                alert(err)
             }
         }
 
@@ -38,7 +41,7 @@ const Deck = ()=>{
         } 
 
         if(drawing){
-            timerId.current = setInterval(drawCard, 1000)
+            timerId.current = setInterval(drawCard, 500)
         }
 
 
